@@ -8,6 +8,7 @@ var cors = require("cors");
 // Own modules
 var EventSearch = require("facebook-events-by-location-core");
 var LocationSearch = require("facebook-events-by-location-core");
+var FacebookIdSearch = require("facebook-events-by-location-core");
 // Create the Express object
 var app = express();
 
@@ -42,7 +43,7 @@ if (process.env.FEBL_CORS_WHITELIST) {
 
 // CORS middleware handler
 var corsOptions = {
-    origin: function(origin, callback){
+    origin: function (origin, callback) {
         if (whitelist.length > 0) {
             var originIsWhitelisted = whitelist.indexOf(origin) !== -1;
             callback(null, originIsWhitelisted);
@@ -54,64 +55,47 @@ var corsOptions = {
     }
 };
 
-// Get pages by location route
-app.get("/locations", cors(corsOptions), function(req, res) {
+// Get facebook id by name + address
+app.get("/facebookid", cors(corsOptions), function (req, res) {
 
-  if (!req.query.lat || !req.query.lng) {
-    res.status(500).json({message: "Please specify the lat and lng parameters!"});
-  } else if (!req.query.accessToken && !process.env.FEBL_ACCESS_TOKEN) {
-    res.status(500).json({message: "Please specify an Access Token, either as environment variable or as accessToken parameter!"});
-  } else {
-
-    var options = {};
-
-    // Add latitude
-    if (req.query.lat) {
-      options.lat = req.query.lat;
-    }
-    if (req.query.lng) {
-      options.lng = req.query.lng;
-    }
-    if (req.query.distance) {
-      options.distance = req.query.distance;
-    }
-    if (req.query.accessToken) {
-      options.accessToken = req.query.accessToken;
+    if (!req.query.name || !req.query.address) {
+        res.status(500).json({message: "Please specify name and address parameters!"});
+    } else if (!req.query.accessToken && !process.env.FEBL_ACCESS_TOKEN) {
+        res.status(500).json({message: "Please specify an Access Token, either as environment variable or as accessToken parameter!"});
     } else {
-      options.accessToken = process.env.FEBL_ACCESS_TOKEN || null;
-    }
-    if (req.query.query) {
-      options.query = req.query.query;
-    }
-    if (req.query.sort) {
-      options.sort = req.query.sort;
-    }
-    if (req.query.version) {
-      options.version = req.query.version;
-    }
-    if (req.query.since) {
-      options.since = req.query.since;
-    }
-    if (req.query.until) {
-      options.until = req.query.until;
-    }
 
-    // Instantiate EventSearch
-    var es = new LocationSearch(options);
+        var options = {};
+        // Add latitude
+        if (req.query.name) {
+            options.name = req.query.name;
+        }
+        if (req.query.address) {
+            options.address = req.query.address;
+        }
+        if (req.query.accessToken) {
+            options.accessToken = req.query.accessToken;
+        } else {
+            options.accessToken = process.env.FEBL_ACCESS_TOKEN || null;
+        }
+        if (req.query.sort) {
+            options.sort = req.query.sort;
+        }
+        if (req.query.version) {
+            options.version = req.query.version;
+        }
+        var es = new FacebookIdSearch(options);
+        es.search().then(function (events) {
+            res.json(events);
+        }).catch(function (error) {
+            res.status(500).json(error);
+        });
 
-    // Search and handle results
-    es.search().then(function (events) {
-      res.json(events);
-    }).catch(function (error) {
-      res.status(500).json(error);
-    });
-
-  }
+    }
 
 });
 
-// Main route
-app.get("/events", cors(corsOptions), function(req, res) {
+// Get pages by location route
+app.get("/locations", cors(corsOptions), function (req, res) {
 
     if (!req.query.lat || !req.query.lng) {
         res.status(500).json({message: "Please specify the lat and lng parameters!"});
@@ -151,6 +135,84 @@ app.get("/events", cors(corsOptions), function(req, res) {
         if (req.query.until) {
             options.until = req.query.until;
         }
+        if (req.query.ids) {
+            var facebookids = [];
+            if (req.query.ids.length > 0) {
+                if (req.query.ids.indexOf(",") > -1) {
+                    facebookids = req.query.ids.split(",");
+                } else {
+                    facebookids.push(req.query.ids);
+                }
+            }
+            options.ids = facebookids;
+        }
+
+        // Instantiate EventSearch
+        var es = new LocationSearch(options);
+
+        // Search and handle results
+        es.search().then(function (events) {
+            res.json(events);
+        }).catch(function (error) {
+            res.status(500).json(error);
+        });
+
+    }
+
+});
+
+// Main route
+app.get("/events", cors(corsOptions), function (req, res) {
+
+    if (!req.query.lat || !req.query.lng) {
+        res.status(500).json({message: "Please specify the lat and lng parameters!"});
+    } else if (!req.query.accessToken && !process.env.FEBL_ACCESS_TOKEN) {
+        res.status(500).json({message: "Please specify an Access Token, either as environment variable or as accessToken parameter!"});
+    } else {
+
+        var options = {};
+
+        // Add latitude
+        if (req.query.lat) {
+            options.lat = req.query.lat;
+        }
+        if (req.query.lng) {
+            options.lng = req.query.lng;
+        }
+        if (req.query.distance) {
+            options.distance = req.query.distance;
+        }
+        if (req.query.accessToken) {
+            options.accessToken = req.query.accessToken;
+        } else {
+            options.accessToken = process.env.FEBL_ACCESS_TOKEN || null;
+        }
+        if (req.query.query) {
+            options.query = req.query.query;
+        }
+        if (req.query.sort) {
+            options.sort = req.query.sort;
+        }
+        if (req.query.version) {
+            options.version = req.query.version;
+        }
+        if (req.query.since) {
+            options.since = req.query.since;
+        }
+        if (req.query.until) {
+            options.until = req.query.until;
+        }
+        if (req.query.ids) {
+            var facebookids = [];
+            if (req.query.ids.length > 0) {
+                if (req.query.ids.indexOf(",") > -1) {
+                    ids = req.query.ids.split(",");
+                } else {
+                    facebookids.push(req.query.ids);
+                }
+            }
+            options.ids = facebookids;
+        }
 
         // Instantiate EventSearch
         var es = new EventSearch(options);
@@ -167,11 +229,11 @@ app.get("/events", cors(corsOptions), function(req, res) {
 });
 
 // Health check route
-app.get("/health", function(req, res) {
+app.get("/health", function (req, res) {
     res.send("OK");
 });
 
 // Start Express.js server
-var server = app.listen(app.get("port"), app.get("host"), function() {
+var server = app.listen(app.get("port"), app.get("host"), function () {
     console.log("Express server listening on port " + server.address().port + " on " + server.address().address);
 });
